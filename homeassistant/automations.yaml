@@ -1,0 +1,101 @@
+# Home Assistant automations for the GHCK disco arcade button.
+# Device/entity IDs are specific to the kitchen's HA install. Re-pick them in the UI if HA is rebuilt.
+#
+# Flow: physical button (ESPHome) -> input_boolean.automation_active -> these automations
+#   ON : switch.hs200_bathroom_switch off, IR "Power" pressed (disco light), random song plays, button glows
+#   OFF: reverse. "Play Random Song" turns the boolean off itself when the song ends.
+#
+# Helper needed (configuration.yaml or Settings > Helpers):
+#   input_boolean:
+#     automation_active:
+#       name: Automation Active
+
+- id: '1771793450797'
+  alias: Arcade On
+  description: ''
+  triggers:
+    - type: turned_on
+      device_id: 71b778bd7c0e8e40626b856b0a40c554
+      entity_id: 22accb9fc1be383f36a52fd495f00df7
+      domain: switch
+      trigger: device
+      enabled: false
+    - trigger: state
+      entity_id:
+        - input_boolean.automation_active
+      to: 'on'
+  conditions: []
+  actions:
+    - action: switch.turn_off
+      target:
+        entity_id: switch.hs200_bathroom_switch
+      data: {}
+    - device_id: 71b778bd7c0e8e40626b856b0a40c554
+      domain: button
+      entity_id: f54e258c9fa93a8fcae03f7fc66e1206
+      type: press
+    - delay:
+        milliseconds: 500
+  # restart (not single): a fast second press must cancel the running delay,
+  # otherwise the IR command gets dropped and light/LED/music fall out of sync.
+  mode: restart
+
+# "Arcade Off" was described in the chat as identical to "Arcade On" except it triggers
+# on to: 'off' (and turns the room light back on). Its exact YAML was never posted.
+# Export it from the kitchen's HA (Settings > Automations > Arcade Off > Edit in YAML) and add it here.
+
+- alias: 'Arcade Button: Play Random Song & Auto-Stop'
+  triggers:
+    - type: turned_on
+      device_id: 71b778bd7c0e8e40626b856b0a40c554
+      entity_id: 22accb9fc1be383f36a52fd495f00df7
+      domain: switch
+      trigger: device
+      enabled: false
+    - entity_id: input_boolean.automation_active
+      to: 'on'
+      trigger: state
+  actions:
+    - variables:
+        songs:
+          - media-source://media_source/local/20 Seconds Fade Drink Makgeolli.mp3
+          - media-source://media_source/local/27 Seconds Fade Shabang Shabang.mp3
+          - media-source://media_source/local/29 Seconds Fade So Hot!.mp3
+        chosen_song: '{{ songs | random }}'
+    # Volume comes from the "MPD Volume" slider exposed by the ESP
+    - target:
+        entity_id: media_player.music_player_daemon
+      data:
+        volume_level: "{{ states('number.ghck_esp_mpd_volume') | float / 100 }}"
+      action: media_player.volume_set
+    - target:
+        entity_id: media_player.music_player_daemon
+      data:
+        media:
+          media_content_id: '{{ chosen_song }}'
+          media_content_type: audio/mpeg
+          metadata: {}
+      action: media_player.play_media
+    - wait_for_trigger:
+        - entity_id: media_player.music_player_daemon
+          to: playing
+          trigger: state
+      timeout:
+        seconds: 5
+      continue_on_timeout: true
+    - wait_for_trigger:
+        - entity_id: media_player.music_player_daemon
+          from: playing
+          trigger: state
+      timeout:
+        minutes: 1
+      continue_on_timeout: true
+    - target:
+        entity_id: input_boolean.automation_active
+      action: input_boolean.turn_off
+      data: {}
+    - type: turn_off
+      device_id: 71b778bd7c0e8e40626b856b0a40c554
+      entity_id: 22accb9fc1be383f36a52fd495f00df7
+      domain: switch
+  mode: restart

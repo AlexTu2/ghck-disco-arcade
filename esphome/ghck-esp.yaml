@@ -1,0 +1,293 @@
+# GHCK-ESP — Good Hood Community Kitchen disco arcade button
+# Board: ESP32-P4 eval board, Ethernet (IP101). IR out GPIO20, LED GPIO21, button GPIO22.
+# NOTE: a later message changed the button's cooldown condition to
+#   'return !id(ir_active) && (millis() - id(last_press)) > 3000;'
+# which also needs an `ir_active` bool global (not defined in this version).
+# Hardware fix at the end of the chat: RC filter on GPIO22.
+
+esphome:
+  name: "esp32-p4-eth"
+  friendly_name: GHCK-ESP
+  min_version: 2025.11.0
+  name_add_mac_suffix: false
+
+esp32:
+  board: esp32-p4-evboard
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+logger:
+  hardware_uart: UART0
+
+api:
+  encryption:
+    key: !secret ghck_api_encryption_key
+
+ota:
+  platform: esphome
+
+ethernet:
+  type: IP101
+  mdc_pin: GPIO31
+  mdio_pin: GPIO52
+  power_pin: GPIO51
+  clk:
+    mode: CLK_EXT_IN
+    pin: GPIO50
+  phy_addr: 1
+
+remote_transmitter:
+  pin:
+    number: GPIO20
+    inverted: true
+  carrier_duty_percent: 33%
+  non_blocking: true
+
+button:
+  - platform: template
+    name: "Power"
+    id: ir_power
+    icon: "mdi:power"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9280, -4474, 610, -563, 608, -564, 607, -565, 606, -566, 605, -566, 605, -567, 604, -567, 604, -569, 613, -1635, 603, -1644, 605, -1643, 606, -1642, 607, -1640, 609, -1639, 610, -1638, 611, -1636, 613, -1635, 603, -568, 603, -1644, 605, -567, 604, -567, 604, -568, 603, -1644, 605, -567, 604, -567, 604, -1643, 606, -566, 605, -1642, 607, -1640, 609, -1638, 611, -561, 610, -1637, 612]
+
+  - platform: template
+    name: "Stop Move"
+    id: ir_stop_move
+    icon: "mdi:stop"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9278, -4476, 608, -591, 580, -593, 578, -593, 578, -567, 604, -595, 576, -596, 575, -597, 585, -588, 583, -1664, 585, -1662, 576, -1672, 577, -1670, 579, -1669, 580, -1668, 581, -1666, 583, -1665, 584, -589, 582, -590, 581, -591, 580, -591, 580, -592, 579, -593, 578, -1669, 580, -592, 579, -1668, 581, -1667, 582, -1665, 584, -1664, 585, -1636, 613, -1662, 576, -596, 575, -1672, 577]
+
+  - platform: template
+    name: "Mod 1"
+    id: ir_mod1
+    icon: "mdi:numeric-1-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9291, -4474, 610, -589, 582, -591, 580, -592, 579, -593, 578, -594, 577, -595, 576, -595, 576, -596, 575, -1672, 577, -1643, 606, -1669, 580, -1667, 582, -1666, 583, -1664, 585, -1663, 586, -1661, 577, -1670, 579, -1669, 580, -1667, 582, -591, 580, -591, 580, -592, 579, -592, 579, -593, 578, -593, 578, -593, 578, -594, 577, -1669, 580, -1667, 582, -1638, 611, -1638, 611, -1636, 602]
+
+  - platform: template
+    name: "Mod 2"
+    id: ir_mod2
+    icon: "mdi:numeric-2-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9371, -4473, 610, -593, 589, -589, 582, -595, 587, -590, 581, -596, 586, -591, 580, -597, 585, -592, 590, -1636, 613, -1640, 609, -1643, 616, -1637, 612, -1640, 609, -1644, 615, -1637, 612, -1640, 609, -1643, 616, -560, 611, -1641, 608, -568, 614, -1638, 611, -591, 580, -568, 614, -561, 610, -593, 578, -1646, 613, -590, 592, -1634, 615, -561, 610, -1641, 608, -1643, 616, -1635, 614]
+
+  - platform: template
+    name: "Mod 3"
+    id: ir_mod3
+    icon: "mdi:numeric-3-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9241, -4472, 601, -568, 603, -594, 577, -592, 579, -590, 581, -589, 582, -587, 574, -596, 575, -594, 577, -1641, 608, -1637, 601, -1644, 605, -1640, 609, -1636, 602, -1642, 607, -1638, 600, -1644, 605, -1640, 609, -588, 573, -596, 575, -1643, 606, -563, 608, -589, 582, -560, 601, -595, 576, -593, 578, -1640, 609, -1636, 602, -594, 577, -1641, 608, -1636, 602, -1643, 606, -1638, 600]
+
+  - platform: template
+    name: "Flash"
+    id: ir_flash
+    icon: "mdi:flash"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9376, -4473, 611, -590, 581, -594, 588, -588, 583, -591, 580, -594, 577, -596, 586, -588, 583, -589, 582, -1638, 611, -1638, 611, -1637, 612, -1637, 612, -1636, 602, -1645, 604, -1643, 606, -1642, 607, -1641, 608, -591, 580, -593, 578, -1642, 607, -1642, 607, -592, 579, -593, 578, -595, 576, -596, 575, -1645, 604, -1644, 605, -595, 576, -595, 576, -1645, 604, -1644, 605, -1643, 606]
+
+  - platform: template
+    name: "A1"
+    id: ir_a1
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9287, -4476, 609, -592, 580, -593, 578, -594, 577, -596, 575, -570, 612, -588, 583, -589, 582, -590, 582, -1666, 583, -1637, 612, -1662, 577, -1671, 578, -1670, 579, -1668, 581, -1667, 582, -1665, 584, -589, 582, -590, 581, -1666, 583, -1637, 612, -587, 584, -588, 583, -589, 582, -590, 581, -1665, 584, -1636, 613, -587, 584, -588, 583, -1664, 585, -1635, 604, -1671, 578, -1669, 580]
+
+  - platform: template
+    name: "A2"
+    id: ir_a2
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9360, -4532, 616, -561, 610, -567, 615, -570, 612, -569, 613, -565, 617, -561, 610, -567, 615, -563, 608, -1650, 610, -1642, 618, -1639, 610, -1643, 617, -1637, 612, -1642, 618, -1639, 610, -1645, 615, -562, 609, -567, 615, -562, 609, -1643, 616, -1639, 610, -570, 612, -568, 614, -562, 609, -1643, 606, -1644, 615, -1636, 613, -563, 608, -568, 614, -1636, 613, -1637, 612, -1638, 611]
+
+  - platform: template
+    name: "A3"
+    id: ir_a3
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9287, -4478, 607, -565, 606, -566, 606, -566, 605, -567, 604, -567, 604, -568, 603, -568, 603, -568, 603, -1644, 605, -1643, 606, -1642, 607, -1642, 607, -1641, 608, -1638, 611, -1636, 603, -1644, 605, -566, 605, -1641, 608, -1638, 611, -1635, 604, -1643, 606, -565, 606, -1640, 609, -561, 610, -1636, 603, -569, 603, -568, 603, -568, 603, -567, 604, -1642, 607, -564, 607, -1639, 610]
+
+  - platform: template
+    name: "A4"
+    id: ir_a4
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9289, -4476, 609, -591, 580, -593, 579, -594, 577, -595, 576, -597, 585, -588, 583, -589, 582, -590, 582, -1666, 583, -1638, 611, -1636, 613, -1635, 604, -1645, 604, -1643, 606, -1643, 606, -1642, 607, -592, 580, -593, 578, -594, 577, -1642, 607, -593, 578, -594, 577, -595, 576, -596, 575, -1644, 605, -1642, 607, -1642, 607, -592, 579, -1667, 582, -1638, 611, -1637, 612, -1635, 604]
+
+  - platform: template
+    name: "A5"
+    id: ir_a5
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9285, -4474, 611, -561, 610, -561, 610, -562, 609, -562, 609, -562, 610, -563, 608, -563, 608, -564, 607, -1639, 610, -1637, 612, -1635, 604, -1644, 605, -1642, 607, -1640, 609, -1638, 611, -1635, 604, -568, 603, -568, 603, -1643, 606, -1640, 609, -1638, 611, -561, 610, -561, 610, -561, 663, -1584, 613, -1633, 606, -567, 604, -567, 604, -568, 603, -1643, 606, -1641, 608, -1639, 610]
+
+  - platform: template
+    name: "A6"
+    id: ir_a6
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9305, -4468, 606, -568, 603, -569, 613, -560, 611, -562, 609, -564, 607, -566, 605, -568, 614, -560, 611, -1637, 612, -1636, 613, -1635, 614, -1634, 605, -1643, 606, -1642, 607, -1641, 608, -1639, 610, -563, 608, -1638, 611, -562, 609, -1637, 612, -1636, 613, -560, 611, -1635, 604, -569, 602, -1644, 605, -567, 604, -1643, 606, -566, 605, -566, 605, -1642, 607, -565, 606, -1640, 609]
+
+  - platform: template
+    name: "A7"
+    id: ir_a7
+    icon: "mdi:alpha-a-box"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9299, -4475, 610, -564, 607, -567, 604, -597, 585, -588, 583, -590, 582, -593, 579, -595, 576, -597, 585, -1664, 585, -1636, 613, -1663, 586, -1663, 586, -1662, 577, -1671, 578, -1670, 579, -1669, 580, -566, 605, -1642, 607, -594, 577, -595, 576, -596, 586, -587, 584, -1663, 586, -587, 584, -1635, 604, -596, 575, -1670, 579, -1640, 609, -1638, 611, -1662, 577, -596, 586, -1661, 578]
+
+  - platform: template
+    name: "Minus"
+    id: ir_minus
+    icon: "mdi:minus"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9267, -4474, 611, -586, 575, -595, 576, -593, 578, -591, 580, -589, 582, -587, 574, -596, 575, -594, 578, -1640, 609, -1636, 603, -1643, 606, -1639, 610, -1636, 603, -1642, 607, -1638, 611, -1635, 604, -593, 578, -1666, 583, -588, 583, -586, 575, -1643, 606, -591, 580, -1665, 574, -596, 576, -1669, 580, -590, 582, -1663, 576, -1644, 605, -591, 581, -1664, 575, -595, 576, -1668, 581]
+
+  - platform: template
+    name: "Plus"
+    id: ir_plus
+    icon: "mdi:plus"
+    on_press:
+      - remote_transmitter.transmit_raw:
+          carrier_frequency: 38kHz
+          code: [9312, -4472, 612, -589, 582, -591, 580, -593, 578, -595, 587, -587, 584, -589, 583, -591, 581, -594, 577, -1644, 605, -1644, 605, -1644, 605, -1644, 605, -1644, 605, -1645, 604, -1645, 615, -1635, 614, -588, 583, -1639, 610, -592, 579, -1643, 606, -595, 587, -588, 583, -1639, 610, -591, 580, -1643, 606, -595, 587, -1636, 613, -589, 582, -1640, 609, -1641, 608, -593, 578, -1644, 616]
+
+output:
+  - platform: ledc
+    pin: GPIO21
+    id: arcade_led_output
+
+light:
+  - platform: monochromatic
+    output: arcade_led_output
+    id: arcade_led
+    name: "Button Glow"
+
+globals:
+  - id: last_press
+    type: unsigned long
+    restore_value: no
+    initial_value: '0'
+  - id: press_count
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+number:
+  - platform: template
+    name: "MPD Volume"
+    id: mpd_volume
+    icon: "mdi:volume-high"
+    min_value: 0
+    max_value: 100
+    step: 5
+    initial_value: 30
+    optimistic: true
+    set_action:
+      - homeassistant.service:
+          service: shell_command.set_mpd_volume
+          data_template:
+            volume: !lambda "return (int)x;"
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO22
+      mode: INPUT_PULLUP
+      inverted: true
+    name: "Arcade Button"
+    id: physical_button
+    filters:
+      - delayed_on: 50ms
+    on_press:
+      then:
+        - lambda: |-
+            id(press_count)++;
+            ESP_LOGW("button", ">>> PRESS #%d  uptime=%ds", id(press_count), (int)(millis()/1000));
+        - if:
+            condition:
+              lambda: 'return (millis() - id(last_press)) > 3000;'
+            then:
+              - lambda: 'id(last_press) = millis();'
+              - switch.toggle: automation_switch
+            else:
+              - lambda: |-
+                  ESP_LOGW("button", ">>> IGNORED (cooldown)  uptime=%ds", (int)(millis()/1000));
+    on_release:
+      then:
+        - lambda: |-
+            ESP_LOGW("button", ">>> RELEASE  uptime=%ds", (int)(millis()/1000));
+
+  - platform: homeassistant
+    entity_id: input_boolean.automation_active
+    id: ha_automation_active
+    internal: true
+    on_state:
+      then:
+        - if:
+            condition:
+              binary_sensor.is_on: ha_automation_active
+            then:
+              - light.turn_on: arcade_led
+              - switch.template.publish:
+                  id: automation_switch
+                  state: ON
+            else:
+              - light.turn_off: arcade_led
+              - switch.template.publish:
+                  id: automation_switch
+                  state: OFF
+
+switch:
+  - platform: template
+    name: "Automation State"
+    id: automation_switch
+    icon: "mdi:play-network"
+    optimistic: true
+    turn_on_action:
+      - homeassistant.service:
+          service: input_boolean.turn_on
+          data:
+            entity_id: input_boolean.automation_active
+    turn_off_action:
+      - homeassistant.service:
+          service: input_boolean.turn_off
+          data:
+            entity_id: input_boolean.automation_active
+
+sensor:
+  - platform: template
+    name: "Button Press Count"
+    lambda: return id(press_count);
+    update_interval: 30s
+  - platform: uptime
+    name: "Uptime"
+    update_interval: 60s

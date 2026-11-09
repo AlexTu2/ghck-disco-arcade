@@ -1,0 +1,7 @@
+secrets.yaml
+**/secrets.yaml
+.esphome/
+.pioenvs/
+.pio/
+*.bin
+*.env
